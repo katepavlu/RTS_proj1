@@ -16,7 +16,7 @@
         Product Revision  :  PIC10 / PIC12 / PIC16 / PIC18 MCUs - 1.81.6
         Device            :  PIC16F18875
         Driver Version    :  2.00
-*/
+ */
 
 /*
     (c) 2018 Microchip Technology Inc. and its subsidiaries. 
@@ -39,66 +39,56 @@
     CLAIMS IN ANY WAY RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT 
     OF FEES, IF ANY, THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS 
     SOFTWARE.
-*/
+ */
 
 #include "mcc_generated_files/mcc.h"
 #include "I2C/i2c.h"
 #include "LCD/lcd.h"
 #include "stdio.h"
+#include "auxiliary.h"
 
 /*
                          Main application
  */
 
-unsigned char readTC74 (void)
-{
-	unsigned char value;
-do{
-	IdleI2C();
-	StartI2C(); IdleI2C();
-    
-	WriteI2C(0x9a | 0x00); IdleI2C();
-	WriteI2C(0x01); IdleI2C();
-	RestartI2C(); IdleI2C();
-	WriteI2C(0x9a | 0x01); IdleI2C();
-	value = ReadI2C(); IdleI2C();
-	NotAckI2C(); IdleI2C();
-	StopI2C();
-} while (!(value & 0x40));
-
-	IdleI2C();
-	StartI2C(); IdleI2C();
-	WriteI2C(0x9a | 0x00); IdleI2C();
-	WriteI2C(0x00); IdleI2C();
-	RestartI2C(); IdleI2C();
-	WriteI2C(0x9a | 0x01); IdleI2C();
-	value = ReadI2C(); IdleI2C();
-	NotAckI2C(); IdleI2C();
-	StopI2C();
-
-	return value;
-}
+volatile Btn S1 = {0};
+volatile Btn S2 = {0};
 
 volatile uint8_t seconds;
 volatile uint8_t minutes;
 volatile uint8_t hours;
-void t1_isr()
-{
+volatile uint8_t temp_timer;
+volatile uint8_t temp_sensor_read;
+
+void t1_isr() {
     seconds++;
-    if(seconds >= 60) {
+    if (seconds >= 60) {
         seconds = 0;
         minutes++;
     }
-    if(minutes >= 60) {
+    if (minutes >= 60) {
         minutes = 0;
         hours = (hours + 1) % 24;
     }
+
+    temp_timer++;
+    if (temp_timer >= 5) {
+        temp_timer = 0;
+        temp_sensor_read = 1;
+    }
     
+    btn_update(&S1, SW1_GetValue());
+    btn_update(&S2, SW2_GetValue());
     D5_Toggle();
 }
+/* I think later on we can have another timer for the buttons? I'm not sure though if this is worth
+void t2_isr() {
+    btn_update(&S1, SW1_GetValue());
+    btn_update(&S2, SW2_GetValue());
+}
+*/
 
-void main(void)
-{    
+void main(void) {
     unsigned char c;
     char buf[17];
 
@@ -120,6 +110,7 @@ void main(void)
     // Disable the Peripheral Interrupts
     //INTERRUPT_PeripheralInterruptDisable();
     TMR1_SetInterruptHandler(t1_isr);
+    // TMR2_SetInterruptHandler(t2_isr); maybe later on we have a 2nd timer for dealing with buttons?
 
     OpenI2C();
     //I2C_SCL = 1;
@@ -127,15 +118,64 @@ void main(void)
     //WPUC3 = 1;
     //WPUC4 = 1;
     LCDinit();
-    
+    c = readTC74();
+
     seconds = 0;
     minutes = 0;
     hours = 0;
+    temp_timer = 0;
+    temp_sensor_read = 0;
+    SystemState state = normal;
+
     D5_SetHigh();
 
-    while (1)
-    {
-        // Add your application code
+    while (1) {
+
+        // Periodic reading of temperature sensor
+        if (temp_sensor_read == 1) {
+            c = readTC74();
+            temp_sensor_read = 0;
+            // max min stuff goes here later?
+        }
+
+        // Handle the buttons depending on the state of the system
+        if (S1.event) {
+            S1.event = 0;
+            switch (state) {
+                case normal:
+                    state = config;
+                    break;
+                case config:
+                    state = normal;
+                    break;
+                case records:
+                    break;
+            }
+        }
+
+
+        // Print the screen depending on the state of the system
+        switch (state) {
+            case normal:
+                LCDcmd(0x80); //first line, first column
+                while (LCDbusy());
+                sprintf(buf, "normal state!");
+                LCDstr(buf);
+                break;
+            case config:
+                LCDcmd(0x80); //first line, first column
+                while (LCDbusy());
+                sprintf(buf, "config state!");
+                LCDstr(buf);
+                break;
+            case records:
+                break;
+        }
+
+
+
+        // i commented this just to test if the buttons are working okay
+        /*
         char C = 'C';
         char T = 'T';
         char L = 'L';
@@ -143,7 +183,6 @@ void main(void)
         char R = 'R';
         uint8_t lum = 2;
         
-        c = readTC74();
         LCDcmd(0x80);       //first line, first column
         while (LCDbusy());
         sprintf(buf,"%02d:%02d:%02d  %c%c%c %c%c",
@@ -155,8 +194,9 @@ void main(void)
         sprintf(buf, "%02d C         L %d",c, lum);
         while (LCDbusy());
         LCDstr(buf);
+         */
     }
 }
 /**
  End of File
-*/
+ */
