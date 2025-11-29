@@ -53,12 +53,12 @@
         <itemPath>mcc_generated_files/tmr1.c</itemPath>
       </logicalFolder>
       <itemPath>main.c</itemPath>
+      <itemPath>auxiliary.c</itemPath>
+      <itemPath>auxiliary.h</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
-    <Elem>I2C</Elem>
-    <Elem>LCD</Elem>
-    <Elem>mcc_generated_files</Elem>
+    <Elem>.</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -195,6 +195,7 @@
         <property key="event.recorder.debugger.behavior" value="Running"/>
         <property key="event.recorder.enabled" value="false"/>
         <property key="event.recorder.scvd.files" value=""/>
+        <property key="firmware.download.all" value="false"/>
         <property key="lastid" value=""/>
         <property key="memories.configurationmemory" value="true"/>
         <property key="memories.dataflash" value="true"/>

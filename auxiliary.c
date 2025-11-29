@@ -43,15 +43,9 @@ unsigned char readTC74(void) {
 }
 
 void btn_update(Btn *btn, uint8_t pin) {
-    if (pin == BTN_PRESSED) {
-        if (btn->timer < 20) btn->timer++;
-
-        if (btn->timer >= BTN_DEBOUNCE && btn->processed == 0) {
-            btn->event = 1;
-            btn->processed = 1;
-        }
-    } else {
-        btn->timer = 0;
-        btn->processed = 0;
+    btn->hist = (btn->hist<<1) | pin;
+    
+    if (btn->hist == 0b10000000 * BTN_RELEASED | 0b01111111 * BTN_PRESSED) {
+        btn->event = 1;
     }
 }

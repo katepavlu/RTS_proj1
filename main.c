@@ -57,11 +57,31 @@ volatile Btn S2 = {0};
 volatile uint8_t seconds;
 volatile uint8_t minutes;
 volatile uint8_t hours;
-volatile uint8_t temp_timer;
-volatile uint8_t temp_sensor_read;
+
+volatile uint8_t sensors_read;
+
+volatile uint8_t temp_alarm_trigd;
+volatile uint8_t time_alarm_trigd;
+volatile uint8_t light_alarm_trigd;
+
+
+#define PMON 5
 
 void t1_isr() {
-    seconds++;
+    static uint8_t xmilis;
+    static uint8_t seconds_monitor;
+    xmilis++;
+    if (xmilis >= 100) {
+        seconds++;
+        seconds_monitor++;
+        xmilis = 0;
+        D5_Toggle();
+    }
+    
+    if (seconds_monitor > PMON) {
+        sensors_read = 1;
+    }
+    
     if (seconds >= 60) {
         seconds = 0;
         minutes++;
@@ -71,25 +91,16 @@ void t1_isr() {
         hours = (hours + 1) % 24;
     }
 
-    temp_timer++;
-    if (temp_timer >= 5) {
-        temp_timer = 0;
-        temp_sensor_read = 1;
-    }
+    
+    
     
     btn_update(&S1, SW1_GetValue());
     btn_update(&S2, SW2_GetValue());
-    D5_Toggle();
 }
-/* I think later on we can have another timer for the buttons? I'm not sure though if this is worth
-void t2_isr() {
-    btn_update(&S1, SW1_GetValue());
-    btn_update(&S2, SW2_GetValue());
-}
-*/
 
 void main(void) {
-    unsigned char c;
+    uint8_t temperature;
+    uint8_t light_level = 2;
     char buf[17];
 
     // initialize the device
@@ -118,25 +129,29 @@ void main(void) {
     //WPUC3 = 1;
     //WPUC4 = 1;
     LCDinit();
-    c = readTC74();
+    temperature = readTC74();
+    
 
     seconds = 0;
     minutes = 0;
     hours = 0;
-    temp_timer = 0;
-    temp_sensor_read = 0;
+    sensors_read = 0;
     SystemState state = normal;
+    
+    
+    uint8_t alarms_enabled = 0;
 
     D5_SetHigh();
 
     while (1) {
 
         // Periodic reading of temperature sensor
-        if (temp_sensor_read == 1) {
-            c = readTC74();
-            temp_sensor_read = 0;
+        if (sensors_read == 1) {
+            temperature = readTC74();
+            sensors_read = 0;
             // max min stuff goes here later?
         }
+        
 
         // Handle the buttons depending on the state of the system
         if (S1.event) {
@@ -157,44 +172,34 @@ void main(void) {
         // Print the screen depending on the state of the system
         switch (state) {
             case normal:
-                LCDcmd(0x80); //first line, first column
+                
+                LCDcmd(0x80);       //first line, first column
                 while (LCDbusy());
-                sprintf(buf, "normal state!");
+                sprintf(buf,"%02d:%02d:%02d  %c%c%c %c%c",
+                        hours, minutes, seconds,
+                        temp_alarm_trigd?'C':' ',
+                        time_alarm_trigd?'T':' ',
+                        light_alarm_trigd?'L':' ',
+                        alarms_enabled?'A':' ',
+                        ' ');
                 LCDstr(buf);
+                while (LCDbusy());
+                LCDcmd(0xc0);       // second line, first column
+                sprintf(buf, "%02d C         L %d",temperature, light_level);
+                while (LCDbusy());
+                LCDstr(buf);
+                
                 break;
+                
             case config:
-                LCDcmd(0x80); //first line, first column
+                LCDcmd(0x80);       //first line, first column
                 while (LCDbusy());
-                sprintf(buf, "config state!");
-                LCDstr(buf);
+                LCDstr("CONFIG MODE");
                 break;
             case records:
                 break;
         }
-
-
-
-        // i commented this just to test if the buttons are working okay
-        /*
-        char C = 'C';
-        char T = 'T';
-        char L = 'L';
-        char A = 'A';
-        char R = 'R';
-        uint8_t lum = 2;
         
-        LCDcmd(0x80);       //first line, first column
-        while (LCDbusy());
-        sprintf(buf,"%02d:%02d:%02d  %c%c%c %c%c",
-                hours, minutes, seconds,
-                C,T,L,A,R);
-        LCDstr(buf);
-        while (LCDbusy());
-        LCDcmd(0xc0);       // second line, first column
-        sprintf(buf, "%02d C         L %d",c, lum);
-        while (LCDbusy());
-        LCDstr(buf);
-         */
     }
 }
 /**
