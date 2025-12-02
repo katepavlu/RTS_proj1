@@ -51,7 +51,7 @@ unsigned char readTC74 (void);
 #define BTN_PRESSED 0
 #define BTN_RELEASED 1
 typedef struct{
-    uint8_t hist;
+    uint16_t hist;
     uint8_t event;
 }Btn;
 

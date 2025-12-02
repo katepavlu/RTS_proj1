@@ -68,9 +68,9 @@ unsigned char readTC74(void) {
 }
 
 void btn_update(volatile Btn *btn, uint8_t pin) {
-    btn->hist = (btn->hist<<1) | pin;
+    btn->hist = (btn->hist<<1) | (uint16_t)pin;
     
-    if (btn->hist == ((0b10000000 * BTN_RELEASED) | (0b01111111 * BTN_PRESSED))) {
+    if (btn->hist == ((0b1000000000000000 * BTN_RELEASED) | (0b0111111111111111 * BTN_PRESSED))) {
         btn->event = 1;
     }
 }
