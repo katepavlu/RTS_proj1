@@ -81,7 +81,7 @@ uint8_t scan_btn(volatile Btn *btn) {
     uint8_t ret = 0;
     if(btn->event > 0) {
         ret = 1;
-        update_lcd = 1;
+        update_lcd = 2;
     }
     btn->event = 0;
     return ret;
