@@ -67,10 +67,22 @@ unsigned char readTC74(void) {
     return value;
 }
 
-void btn_update(Btn *btn, uint8_t pin) {
+void btn_update(volatile Btn *btn, uint8_t pin) {
     btn->hist = (btn->hist<<1) | pin;
     
-    if (btn->hist == 0b10000000 * BTN_RELEASED | 0b01111111 * BTN_PRESSED) {
+    if (btn->hist == ((0b10000000 * BTN_RELEASED) | (0b01111111 * BTN_PRESSED))) {
         btn->event = 1;
     }
+}
+
+extern volatile uint8_t update_lcd;
+
+uint8_t scan_btn(volatile Btn *btn) {
+    uint8_t ret = 0;
+    if(btn->event > 0) {
+        ret = 1;
+        update_lcd = 1;
+    }
+    btn->event = 0;
+    return ret;
 }

@@ -5,10 +5,23 @@
 #include "I2C/i2c.h"
 #include <xc.h>
 
-typedef enum {normal, config, records}SystemState;
-typedef enum {time, time_alarm, temp_alarm, light_alarm, alarms, reset}ConfigSelection;
-typedef enum {sel_hours, sel_minutes, sel_seconds}TimeSelection;
-typedef enum {regular, activated}Activation;
+typedef enum {NORMAL, CONFIG, RECORDS1, RECORDS2}SystemState;
+typedef enum {TIME_SET, TIME_ALARM, TEMP_ALARM, LIGHT_ALARM, ALARMS, RESET}ConfigSelection;
+typedef enum {SET_HOURS, SET_MINUTES, SET_SECONDS}TimeSelection;
+typedef enum {INACTIVE, ACTIVE}Activation;
+
+typedef struct {
+    uint8_t seconds;
+    uint8_t minutes;
+    uint8_t hours;
+}Time;
+
+typedef struct {
+    SystemState sys;
+    ConfigSelection cfg;
+    TimeSelection tim;
+    Activation act;
+}State;
 
 // Memory addresses
 #define EEPROM_START_ADDR 0x7000
@@ -42,6 +55,7 @@ typedef struct{
     uint8_t event;
 }Btn;
 
-void btn_update(Btn *btn, uint8_t pin);
+void btn_update(volatile Btn *btn, uint8_t pin);
+uint8_t scan_btn(volatile Btn *btn);
 
 #endif
