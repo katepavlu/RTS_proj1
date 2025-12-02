@@ -27,6 +27,9 @@ typedef enum {regular, activated}Activation;
 
 void set_eeprom_default();
 
+void set_eeprom(uint16_t address, uint8_t value);
+uint8_t read_eeprom(uint16_t address);
+
 unsigned char readTC74 (void);
 
 
