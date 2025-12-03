@@ -65,6 +65,26 @@
 #define PULL_UP_ENABLED      1
 #define PULL_UP_DISABLED     0
 
+// get/set ANALOG_IN aliases
+#define ANALOG_IN_TRIS                 TRISAbits.TRISA0
+#define ANALOG_IN_LAT                  LATAbits.LATA0
+#define ANALOG_IN_PORT                 PORTAbits.RA0
+#define ANALOG_IN_WPU                  WPUAbits.WPUA0
+#define ANALOG_IN_OD                   ODCONAbits.ODCA0
+#define ANALOG_IN_ANS                  ANSELAbits.ANSA0
+#define ANALOG_IN_SetHigh()            do { LATAbits.LATA0 = 1; } while(0)
+#define ANALOG_IN_SetLow()             do { LATAbits.LATA0 = 0; } while(0)
+#define ANALOG_IN_Toggle()             do { LATAbits.LATA0 = ~LATAbits.LATA0; } while(0)
+#define ANALOG_IN_GetValue()           PORTAbits.RA0
+#define ANALOG_IN_SetDigitalInput()    do { TRISAbits.TRISA0 = 1; } while(0)
+#define ANALOG_IN_SetDigitalOutput()   do { TRISAbits.TRISA0 = 0; } while(0)
+#define ANALOG_IN_SetPullup()          do { WPUAbits.WPUA0 = 1; } while(0)
+#define ANALOG_IN_ResetPullup()        do { WPUAbits.WPUA0 = 0; } while(0)
+#define ANALOG_IN_SetPushPull()        do { ODCONAbits.ODCA0 = 0; } while(0)
+#define ANALOG_IN_SetOpenDrain()       do { ODCONAbits.ODCA0 = 1; } while(0)
+#define ANALOG_IN_SetAnalogMode()      do { ANSELAbits.ANSA0 = 1; } while(0)
+#define ANALOG_IN_SetDigitalMode()     do { ANSELAbits.ANSA0 = 0; } while(0)
+
 // get/set D2 aliases
 #define D2_TRIS                 TRISAbits.TRISA4
 #define D2_LAT                  LATAbits.LATA4

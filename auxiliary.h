@@ -65,6 +65,7 @@ void btn_update(volatile Btn *btn, uint8_t pin);
 uint8_t handle_btn(volatile Btn *btn);
 
 void print_record(char* buf, Record* rec);
+void update_record(Record* rec, Time tim, uint8_t temp, uint8_t light);
 
 void t1_isr();
 

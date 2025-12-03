@@ -68,10 +68,10 @@ volatile uint8_t light_alarm_trigd;
 
 volatile uint8_t update_lcd = 1;
 
-Record rec_maxtemp = {};
-Record rec_mintemp = {};
-Record rec_maxlight = {};
-Record rec_minlight = {};
+Record rec_maxtemp = {{0,0,0},0,0};
+Record rec_mintemp = {{0,0,0},50,0};
+Record rec_maxlight = {{0,0,0},0,0};
+Record rec_minlight = {{0,0,0},0,3};
 
 
 // cursor positions
@@ -98,7 +98,7 @@ uint8_t pos[RESET + 1][SET_SECONDS + 1][ACTIVE + 1] ={
 
 void main(void) {
     uint8_t temperature;
-    uint8_t light_level = 2;
+    uint8_t light_level;
     char buf[17];
 
     // initialize the device
@@ -149,6 +149,20 @@ void main(void) {
         // Periodic reading of temperature sensor
         if (trigger_sensors == 1) {
             temperature = readTC74();
+            
+            ADCC_StartConversion(ANALOG_IN);
+            while(!ADCC_IsConversionDone());
+            light_level = (uint8_t)((3 * ADCC_GetSingleConversion(ANALOG_IN))/1023 );
+            
+            if (temperature >= rec_maxtemp.temp) 
+                update_record(&rec_maxtemp, systime, temperature, light_level);
+            if (temperature <= rec_mintemp.temp)
+                update_record(&rec_mintemp, systime, temperature, light_level);
+            if (light_level >= rec_maxlight.light )
+                update_record(&rec_maxlight, systime, temperature, light_level);
+            if (light_level <= rec_minlight.light)
+                update_record(&rec_minlight, systime, temperature, light_level);
+            
             trigger_sensors = 0;
             update_lcd = 1;
             // max min stuff goes here later?

@@ -101,6 +101,14 @@ void print_record(char* buf, Record* rec) {
             rec->light);
 }
 
+void update_record(Record* rec, Time tim, uint8_t temp, uint8_t light) {
+    rec->time.hours = tim.hours;
+    rec->time.minutes = tim.minutes;
+    rec->time.seconds = tim.seconds;
+    rec->temp = temp;
+    rec->light = light;
+}
+
 // periodic timer isr (5ms)
 void t1_isr() {
     static uint8_t xmilis;
