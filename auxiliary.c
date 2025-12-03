@@ -16,7 +16,13 @@ void set_eeprom_default(){
     DATAEE_WriteByte(ADDR_CLKM, 0);
      */
 }
-
+void write_record_eeprom(uint16_t address, Record rec){
+    //DATAEE_WriteByte(address, rec.time.hours);
+    //DATAEE_WriteByte(address + 1, rec.time.minutes);
+    //DATAEE_WriteByte(address + 2, rec.time.second);
+    //DATAEE_WriteByte(address + 3, rec.temp);
+    //DATAEE_WriteByte(address + 4, rec.light);
+}
 void write_eeprom(uint16_t address, uint8_t value){
     //DATAEE_WriteByte(ADDR_CLKM, value);
 }
