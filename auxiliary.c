@@ -162,3 +162,8 @@ void t1_isr() {
     btn_update(&S1, SW1_GetValue());
     btn_update(&S2, SW2_GetValue());
 }
+void t2_isr()
+{
+    TMR2_StopTimer();
+    PWM_Output_D4_Disable();
+}
