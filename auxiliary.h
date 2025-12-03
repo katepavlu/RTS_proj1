@@ -25,6 +25,11 @@ typedef enum {regular, activated}Activation;
 #define ADDR_CLKH       (EEPROM_START_ADDR + 9) // 0x7009
 #define ADDR_CLKM       (EEPROM_START_ADDR + 10) // 0x7010
 
+#define MAXLUM        (EEPROM_START_ADDR + 11) //0X7011
+#define MINLUM        (EEPROM_START_ADDR + 12) //0X7012
+#define MAXTEMP        (EEPROM_START_ADDR + 13) //0X7013
+#define MINTEMP       (EEPROM_START_ADDR + 14) //0X7014
+
 void set_eeprom_default();
 
 void set_eeprom(uint16_t address, uint8_t value);
