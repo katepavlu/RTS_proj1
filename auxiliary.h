@@ -23,6 +23,12 @@ typedef struct {
     Activation act;
 }State;
 
+typedef struct {
+    Time time;
+    uint8_t temp;
+    uint8_t light;
+}Record;
+
 // Memory addresses
 #define EEPROM_START_ADDR 0x7000
 
@@ -38,6 +44,8 @@ typedef struct {
 #define ADDR_CLKH       (EEPROM_START_ADDR + 9) // 0x7009
 #define ADDR_CLKM       (EEPROM_START_ADDR + 10) // 0x7010
 
+#define PMON 5
+
 void set_eeprom_default();
 
 void set_eeprom(uint16_t address, uint8_t value);
@@ -45,17 +53,25 @@ uint8_t read_eeprom(uint16_t address);
 
 unsigned char readTC74 (void);
 
-
-
 // Button settings and structure
 #define BTN_PRESSED 0
 #define BTN_RELEASED 1
 typedef struct{
-    uint16_t hist;
+    uint8_t hist;
     uint8_t event;
 }Btn;
 
 void btn_update(volatile Btn *btn, uint8_t pin);
-uint8_t scan_btn(volatile Btn *btn);
+uint8_t handle_btn(volatile Btn *btn);
+
+void print_record(char* buf, Record* rec);
+
+void t1_isr();
+
+extern volatile uint8_t update_lcd;
+extern volatile uint8_t time_paused;
+extern volatile uint8_t trigger_sensors;
+extern volatile Time systime;
+extern volatile Btn S1, S2;
 
 #endif
