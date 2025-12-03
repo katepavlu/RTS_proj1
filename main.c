@@ -68,10 +68,10 @@ volatile uint8_t light_alarm_trigd;
 
 volatile uint8_t update_lcd = 1;
 
-Record rec_maxtemp = {{0,0,0},0,0};
-Record rec_mintemp = {{0,0,0},50,0};
-Record rec_maxlight = {{0,0,0},0,0};
-Record rec_minlight = {{0,0,0},0,3};
+Record rec_maxtemp;
+Record rec_mintemp;
+Record rec_maxlight;
+Record rec_minlight;
 
 
 // cursor positions
@@ -100,6 +100,10 @@ void main(void) {
     uint8_t temperature;
     uint8_t light_level;
     char buf[17];
+    update_record(&rec_maxtemp, systime, 0, 0);
+    update_record(&rec_mintemp, systime, 50, 0);
+    update_record(&rec_maxlight, systime, 0, 0);
+    update_record(&rec_minlight, systime, 0, 3);
 
     // initialize the device
     SYSTEM_Initialize();
@@ -356,7 +360,10 @@ void main(void) {
                                 state.sys = NORMAL;
                             }
                             if(handle_btn(&S2)) {
-                                //do the reset thingy
+                                update_record(&rec_maxtemp, systime, 0, 0);
+                                update_record(&rec_mintemp, systime, 50, 0);
+                                update_record(&rec_maxlight, systime, 0, 0);
+                                update_record(&rec_minlight, systime, 0, 3);
                             }
 
                             break;
@@ -375,6 +382,8 @@ void main(void) {
             }
             
         }
+        
+        asm("SLEEP");
         
     }
 }
