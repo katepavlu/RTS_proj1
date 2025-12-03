@@ -163,28 +163,32 @@ void main(void) {
             
             if (temperature >= rec_maxtemp.temp) 
                 update_record(&rec_maxtemp, systime, temperature, light_level);
+                write_record_eeprom(MAXTEMP,rec_maxtemp);
             if (temperature <= rec_mintemp.temp)
                 update_record(&rec_mintemp, systime, temperature, light_level);
+                write_record_eeprom(MINTEMP,rec_mintemp);
             if (light_level >= rec_maxlight.light )
                 update_record(&rec_maxlight, systime, temperature, light_level);
+                write_record_eeprom(MAXLUM,rec_maxlight);
             if (light_level <= rec_minlight.light)
                 update_record(&rec_minlight, systime, temperature, light_level);
+                write_record_eeprom(MINLUM,rec_minlight);
             
             trigger_sensors = 0;
             update_lcd = 1;
             if (temperature > temp_threshold){
-                PWM_Output_D4_Enable();
-                TMR2_StartTimer();
-                PWM6_LoadDutyValue(1);
+                //PWM_Output_D4_Enable();
+                //TMR2_StartTimer();
+                //PWM6_LoadDutyValue(1);
                 D3_SetHigh();
             } else {
                 D3_SetLow();
             }
 
             if(lum_level < lum_threshold){
-                PWM_Output_D4_Enable();
-                TMR2_StartTimer();
-                PWM6_LoadDutyValue(1);
+                //PWM_Output_D4_Enable();
+                //TMR2_StartTimer();
+                //PWM6_LoadDutyValue(1);
                 D2_SetHigh();
             } else{
                 D2_SetLow();
@@ -411,3 +415,4 @@ void main(void) {
 /**
  End of File
  */
+
