@@ -120,7 +120,6 @@ void main(void) {
     read_from_eeprom((Params*)&EEPROM_params);
     read_from_eeprom((Params*)&current_params);
     
-    uint8_t alarms_enabled = 0;
     time_alarm_trigd = 0;
     temp_alarm_trigd = 0;
     light_alarm_trigd = 0;
@@ -164,7 +163,7 @@ void main(void) {
                             temp_alarm_trigd?'C':' ',
                             time_alarm_trigd?'T':' ',
                             light_alarm_trigd?'L':' ',
-                            alarms_enabled?'A':' ',
+                            current_params.alaf?'A':' ',
                             ' ');
                     LCDstr(display_buf);
                     while (LCDbusy());
@@ -187,7 +186,7 @@ void main(void) {
                             'C',
                             'T',
                             'L',
-                            alarms_enabled?'A':'a',
+                            current_params.alaf?'A':'a',
                             'R');
                     LCDstr(display_buf);
                     while (LCDbusy());
@@ -318,7 +317,7 @@ void main(void) {
                         case ALARMS:
                             state.cfg = handle_btn(&S1)? RESET: state.cfg;
                             if(handle_btn(&S2))
-                                alarms_enabled = !alarms_enabled;
+                                current_params.alaf = !current_params.alaf;
                             break;
                         case RESET:
                             if( handle_btn(&S1) ) {

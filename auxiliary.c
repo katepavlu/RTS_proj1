@@ -226,7 +226,7 @@ void t1_isr() {
     static uint8_t xmilis;
     static uint8_t seconds_monitor;
     xmilis++;
-    if (xmilis >= 200) {
+    if (xmilis > 200) {
         if (!time_paused) {
             current_params.systime.seconds++;
             update_lcd = 1;
