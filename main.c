@@ -169,7 +169,6 @@ void main(void) {
             
             trigger_sensors = 0;
             update_lcd = 1;
-            // max min stuff goes here later?
         }
         
         if(update_lcd) {
@@ -274,17 +273,14 @@ void main(void) {
                             time_paused = 1;
                             switch (state.tim) {
                                 case SET_HOURS:
-                                    //pos = ;// cursor position
                                     state.tim = handle_btn(&S1)? SET_MINUTES: state.tim;
                                     systime.hours = (systime.hours + handle_btn(&S2)) % 24;
                                     break;
                                 case SET_MINUTES:
-                                    //pos = 0x04;
                                     state.tim = handle_btn(&S1)? SET_SECONDS: state.tim;
                                     systime.minutes = (systime.minutes + handle_btn(&S2)) % 60;
                                     break;
                                 case SET_SECONDS:
-                                    //pos = 0x07;
                                     if( handle_btn(&S1) ) {
                                         state.tim = SET_HOURS;
                                         state.cfg = TIME_ALARM;  
@@ -296,24 +292,20 @@ void main(void) {
                             break;
                         case TIME_ALARM:
                             if(state.act == INACTIVE) {
-                                //pos = 0x0a;
                                 state.cfg = handle_btn(&S1)? TEMP_ALARM: state.cfg;
                                 state.act = handle_btn(&S2)? ACTIVE: state.act;
                             }
                             else {
                                 switch (state.tim) {
                                     case SET_HOURS:
-                                        //pos = 0x01;
                                         state.tim = handle_btn(&S1)? SET_MINUTES: state.tim;
                                         altime.hours = (altime.hours + handle_btn(&S2)) % 24;
                                         break;
                                     case SET_MINUTES:
-                                        //pos = 0x04;
                                         state.tim = handle_btn(&S1)? SET_SECONDS: state.tim;
                                         altime.minutes = (altime.minutes + handle_btn(&S2)) % 60;
                                         break;
                                     case SET_SECONDS:
-                                        //pos = 0x07;
                                         if( handle_btn(&S1) ) {
                                             state.tim = SET_HOURS;
                                             state.act = INACTIVE;                                            
@@ -325,36 +317,30 @@ void main(void) {
                             break;
                         case TEMP_ALARM:
                             if(state.act == INACTIVE) {
-                                //pos = 0x0b;
                                 state.cfg = handle_btn(&S1)? LIGHT_ALARM: state.cfg;
                                 state.act = handle_btn(&S2)? ACTIVE: state.act;
                             }
                             else {
-                                //pos = 0x41;
                                 state.act = handle_btn(&S1)? INACTIVE: state.act;
                                 altemp = (altemp + handle_btn(&S2)) % 51;
                             }
                             break;
                         case LIGHT_ALARM:
                             if(state.act == INACTIVE) {
-                                //pos = 0x0c;
                                 state.cfg = handle_btn(&S1)? ALARMS: state.cfg;
                                 state.act = handle_btn(&S2)? ACTIVE: state.act;
                             }
                             else {
-                                //pos = 0x4f;
                                 state.act = handle_btn(&S1)? INACTIVE: state.act;
                                 allight = (allight + handle_btn(&S2)) % 4;
                             }
                             break;
                         case ALARMS:
-                            //pos = 0x0e;
                             state.cfg = handle_btn(&S1)? RESET: state.cfg;
                             if(handle_btn(&S2))
                                 alarms_enabled = !alarms_enabled;
                             break;
                         case RESET:
-                            //pos = 0x0f;
                             if( handle_btn(&S1) ) {
                                 state.cfg = TIME_SET;
                                 state.sys = NORMAL;
@@ -383,7 +369,7 @@ void main(void) {
             
         }
         
-        asm("SLEEP");
+        asm("SLEEP"); // enter low power mode until next timer firing
         
     }
 }
