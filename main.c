@@ -55,7 +55,6 @@ volatile Btn S1 = {0};
 volatile Btn S2 = {0};
 
 volatile Time systime;
-Time altime;
 uint8_t altemp;
 uint8_t allight;
 volatile uint8_t time_paused;
@@ -72,6 +71,8 @@ Record rec_maxtemp;
 Record rec_mintemp;
 Record rec_maxlight;
 Record rec_minlight;
+
+volatile Parameters params;
 
 
 // cursor positions
@@ -107,6 +108,7 @@ void main(void) {
 
     // initialize the device
     SYSTEM_Initialize();
+    system_init_params();
 
     // When using interrupts, you need to set the Global and Peripheral Interrupt Enable bits
     // Use the following macros to:
@@ -131,9 +133,8 @@ void main(void) {
     //WPUC3 = 1;
     //WPUC4 = 1;
     LCDinit();    
-
-    systime.hours = 0; systime.minutes = 0; systime.seconds = 0;
-    altime.hours = 0; altime.minutes= 0; altime.seconds = 0;
+    // this now should be done in system_init_parms(), line 111
+    //systime.hours = 0; systime.minutes = 0; systime.seconds = 0;
     altemp = 0;
     allight = 0;
     trigger_sensors = 1;
@@ -198,13 +199,13 @@ void main(void) {
 
                 case CONFIG:
                     
-
+                    
                     LCDcmd(0x80);       //first line, first column
                     while (LCDbusy());
                     sprintf(buf,"%02d:%02d:%02d  %c%c%c %c%c",
-                            (state.cfg!=TIME_ALARM)? systime.hours : altime.hours,
-                            (state.cfg!=TIME_ALARM)? systime.minutes: altime.minutes,
-                            (state.cfg!=TIME_ALARM)? systime.seconds: altime.seconds,
+                            (state.cfg!=TIME_ALARM)? systime.hours : params.alarm.hours,
+                            (state.cfg!=TIME_ALARM)? systime.minutes: params.alarm.minutes,
+                            (state.cfg!=TIME_ALARM)? systime.seconds: params.alarm.seconds,
                             'C',
                             'T',
                             'L',
@@ -305,12 +306,12 @@ void main(void) {
                                     case SET_HOURS:
                                         //pos = 0x01;
                                         state.tim = handle_btn(&S1)? SET_MINUTES: state.tim;
-                                        altime.hours = (altime.hours + handle_btn(&S2)) % 24;
+                                        params.alarm.hours = (params.alarm.hours + handle_btn(&S2)) % 24;
                                         break;
                                     case SET_MINUTES:
                                         //pos = 0x04;
                                         state.tim = handle_btn(&S1)? SET_SECONDS: state.tim;
-                                        altime.minutes = (altime.minutes + handle_btn(&S2)) % 60;
+                                        params.alarm.minutes = (params.alarm.minutes + handle_btn(&S2)) % 60;
                                         break;
                                     case SET_SECONDS:
                                         //pos = 0x07;
@@ -318,7 +319,7 @@ void main(void) {
                                             state.tim = SET_HOURS;
                                             state.act = INACTIVE;                                            
                                         }
-                                        altime.seconds = (altime.seconds + handle_btn(&S2)) % 60;
+                                        params.alarm.seconds = (params.alarm.seconds + handle_btn(&S2)) % 60;
                                         break;
                                 }
                             }

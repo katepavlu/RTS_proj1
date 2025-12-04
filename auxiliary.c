@@ -1,6 +1,14 @@
 #include "auxiliary.h"
 #include "mcc_generated_files/mcc.h"
 
+void write_eeprom(uint16_t address, uint8_t value){
+    //DATAEE_WriteByte(ADDR_CLKM, value);
+}
+
+uint8_t read_eeprom(uint16_t address){
+    //return DATAEE_ReadByte(address)
+}
+
 void set_eeprom_default(){
     /* From the prof example we should be able to just uncomment this and it should work for the default values
     DATAEE_WriteByte(ADDR_PMON, 5);
@@ -17,14 +25,90 @@ void set_eeprom_default(){
      */
 }
 
-void write_eeprom(uint16_t address, uint8_t value){
-    //DATAEE_WriteByte(ADDR_CLKM, value);
+void set_parameters_default(){
+    params.pmon = PMON;
+    params.tala = TALA;
+    params.tina = TINA;
+    params.alaf = ALAF;
+    params.alarm.hours =  ALAH;
+    params.alarm.minutes =  ALAM;
+    params.alarm.seconds =  ALAS;
+    params.alat = ALAT;
+    params.alal = ALAL;
+    params.clkh = CLKH;
+    params.clkm = CLKM;
 }
 
-uint8_t read_eeprom(uint16_t address){
-    //return DATAEE_ReadByte(address)
+void load_from_eeprom(){
+    params.pmon = read_eeprom(ADDR_PMON);
+    params.tala = read_eeprom(ADDR_TALA);
+    params.tina = read_eeprom(ADDR_TINA);
+    params.alaf = read_eeprom(ADDR_ALAF);
+    params.alarm.hours = read_eeprom(ADDR_ALAH);
+    params.alarm.minutes = read_eeprom(ADDR_ALAM);
+    params.alarm.seconds = read_eeprom(ADDR_ALAS);
+    params.alat = read_eeprom(ADDR_ALAT);
+    params.alal = read_eeprom(ADDR_ALAL);
+    params.clkh = read_eeprom(ADDR_CLKH);
+    params.clkm = read_eeprom(ADDR_CLKM);
 }
 
+void save_to_eeprom(){
+    set_eeprom(ADDR_PMON, params.pmon);
+    set_eeprom(ADDR_TALA, params.tala);
+    set_eeprom(ADDR_TINA, params.tina);
+    set_eeprom(ADDR_ALAF, params.alaf);
+    set_eeprom(ADDR_ALAH, params.alarm.hours);
+    set_eeprom(ADDR_ALAM, params.alarm.minutes);
+    set_eeprom(ADDR_ALAS, params.alarm.seconds);
+    set_eeprom(ADDR_ALAT, params.alat);
+    set_eeprom(ADDR_ALAL, params.alal);
+    set_eeprom(ADDR_CLKH, params.clkh); 
+    set_eeprom(ADDR_CLKM, params.clkm);
+    
+    uint8_t new_sum=calculate_checksum();
+    set_eeprom(ADDR_CHECKSUM, new_sum);
+}
+
+uint8_t calculate_checksum(){
+    uint8_t sum = 0;
+    sum += params.pmon;
+    sum += params.tala;
+    sum += params.tina;
+    sum += params.alaf;
+    sum += params.alarm.hours;
+    sum += params.alarm.minutes;
+    sum += params.alarm.seconds;
+    sum += params.alat;
+    sum += params.alal;
+    sum += params.clkh;
+    sum += params.clkm;
+    return sum;
+}
+
+void system_init_params(){
+    uint8_t stored_sum, calc_sum;
+    
+    load_from_eeprom();
+    
+    stored_sum = read_eeprom(ADDR_CHECKSUM);
+    
+    calc_sum = calculate_checksum();
+    
+    if (stored_sum == calc_sum){
+        // Again, might have complicated this part? we return the clock to the state it was when it was saved
+        systime.hours = params.clkh;
+        systime.minutes = params.clkm;
+        systime.seconds = 0;
+    }
+    else{
+        set_parameters_default();
+        systime.hours = 0;
+        systime.minutes = 0;
+        systime.seconds = 0;
+        save_to_eeprom();
+    }
+}
 
 unsigned char readTC74(void) {
     unsigned char value;

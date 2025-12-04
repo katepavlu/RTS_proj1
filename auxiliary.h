@@ -5,6 +5,38 @@
 #include "I2C/i2c.h"
 #include <xc.h>
 
+// Memory addresses
+#define EEPROM_START_ADDR 0x7000
+
+#define ADDR_PMON       (EEPROM_START_ADDR + 0) // 0x7000
+#define ADDR_TALA       (EEPROM_START_ADDR + 1) // 0x7001
+#define ADDR_TINA       (EEPROM_START_ADDR + 2) // 0x7002
+#define ADDR_ALAF       (EEPROM_START_ADDR + 3) // 0x7003
+#define ADDR_ALAH       (EEPROM_START_ADDR + 4) // 0x7004
+#define ADDR_ALAM       (EEPROM_START_ADDR + 5) // 0x7005
+#define ADDR_ALAS       (EEPROM_START_ADDR + 6) // 0x7006
+#define ADDR_ALAT       (EEPROM_START_ADDR + 7) // 0x7007
+#define ADDR_ALAL       (EEPROM_START_ADDR + 8) // 0x7008
+#define ADDR_CLKH       (EEPROM_START_ADDR + 9) // 0x7009
+#define ADDR_CLKM       (EEPROM_START_ADDR + 10) // 0x7010
+
+#define ADDR_CHECKSUM       (EEPROM_START_ADDR + 11) // 0x7011
+
+// Default Values
+
+#define PMON 5
+#define TALA 3
+#define TINA 10
+#define ALAF 0
+#define ALAH 12
+#define ALAM 0
+#define ALAS 0
+#define ALAT 20
+#define ALAL 2
+#define CLKH 0
+#define CLKM 0
+
+
 typedef enum {NORMAL, CONFIG, RECORDS1, RECORDS2}SystemState;
 typedef enum {TIME_SET, TIME_ALARM, TEMP_ALARM, LIGHT_ALARM, ALARMS, RESET}ConfigSelection;
 typedef enum {SET_HOURS, SET_MINUTES, SET_SECONDS}TimeSelection;
@@ -29,27 +61,36 @@ typedef struct {
     uint8_t light;
 }Record;
 
-// Memory addresses
-#define EEPROM_START_ADDR 0x7000
+typedef struct {
+    uint8_t pmon;
+    uint8_t tala;
+    uint8_t tina;
+    uint8_t alaf;
+    Time alarm;
+    uint8_t alat;
+    uint8_t alal;
+    uint8_t clkh;
+    uint8_t clkm;
+} Parameters;
 
-#define ADDR_PMON       (EEPROM_START_ADDR + 0) // 0x7000
-#define ADDR_TALA       (EEPROM_START_ADDR + 1) // 0x7001
-#define ADDR_TINA       (EEPROM_START_ADDR + 2) // 0x7002
-#define ADDR_ALAF       (EEPROM_START_ADDR + 3) // 0x7003
-#define ADDR_ALAH       (EEPROM_START_ADDR + 4) // 0x7004
-#define ADDR_ALAM       (EEPROM_START_ADDR + 5) // 0x7005
-#define ADDR_ALAS       (EEPROM_START_ADDR + 6) // 0x7006
-#define ADDR_ALAT       (EEPROM_START_ADDR + 7) // 0x7007
-#define ADDR_ALAL       (EEPROM_START_ADDR + 8) // 0x7008
-#define ADDR_CLKH       (EEPROM_START_ADDR + 9) // 0x7009
-#define ADDR_CLKM       (EEPROM_START_ADDR + 10) // 0x7010
+// I might have over complicated this part
+extern volatile Parameters params;
+extern volatile Time systime;
 
-#define PMON 5
 
-void set_eeprom_default();
 
 void set_eeprom(uint16_t address, uint8_t value);
 uint8_t read_eeprom(uint16_t address);
+
+void set_eeprom_default();
+void set_parameters_default();
+
+void system_init_params();
+uint8_t calculate_checksum();
+
+void load_from_eeprom();
+void save_to_eeprom();
+
 
 unsigned char readTC74 (void);
 
