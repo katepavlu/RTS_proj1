@@ -54,54 +54,56 @@
 volatile Btn S1 = {0};
 volatile Btn S2 = {0};
 
-volatile uint8_t seconds;
-volatile uint8_t minutes;
-volatile uint8_t hours;
+volatile Time systime;
+Time altime;
+uint8_t altemp;
+uint8_t allight;
+volatile uint8_t time_paused;
 
-volatile uint8_t sensors_read;
+volatile uint8_t trigger_sensors;
 
 volatile uint8_t temp_alarm_trigd;
 volatile uint8_t time_alarm_trigd;
 volatile uint8_t light_alarm_trigd;
 
+volatile uint8_t update_lcd = 1;
 
-#define PMON 5
+Record rec_maxtemp;
+Record rec_mintemp;
+Record rec_maxlight;
+Record rec_minlight;
 
-void t1_isr() {
-    static uint8_t xmilis;
-    static uint8_t seconds_monitor;
-    xmilis++;
-    if (xmilis >= 100) {
-        seconds++;
-        seconds_monitor++;
-        xmilis = 0;
-        D5_Toggle();
-    }
-    
-    if (seconds_monitor > PMON) {
-        sensors_read = 1;
-    }
-    
-    if (seconds >= 60) {
-        seconds = 0;
-        minutes++;
-    }
-    if (minutes >= 60) {
-        minutes = 0;
-        hours = (hours + 1) % 24;
-    }
 
+// cursor positions
+uint8_t pos[RESET + 1][SET_SECONDS + 1][ACTIVE + 1] ={
+    [TIME_SET][SET_HOURS][INACTIVE]    = 0x01,
+    [TIME_SET][SET_MINUTES][INACTIVE]  = 0x04,
+    [TIME_SET][SET_SECONDS][INACTIVE]  = 0x07,
     
+    [TIME_ALARM][SET_HOURS][INACTIVE]  = 0x0a,
     
+    [TIME_ALARM][SET_HOURS][ACTIVE]    = 0x01,
+    [TIME_ALARM][SET_MINUTES][ACTIVE]  = 0x04,
+    [TIME_ALARM][SET_SECONDS][ACTIVE]  = 0x07,
     
-    btn_update(&S1, SW1_GetValue());
-    btn_update(&S2, SW2_GetValue());
-}
+    [TEMP_ALARM][SET_HOURS][INACTIVE]  = 0x0b,
+    [TEMP_ALARM][SET_HOURS][ACTIVE]    = 0x41,
+    
+    [LIGHT_ALARM][SET_HOURS][INACTIVE] = 0x0c,
+    [LIGHT_ALARM][SET_HOURS][ACTIVE]   = 0x4f,
+    
+    [ALARMS][SET_HOURS][INACTIVE]      = 0x0e,
+    [RESET][SET_HOURS][INACTIVE]       = 0x0f    
+};
 
 void main(void) {
     uint8_t temperature;
-    uint8_t light_level = 2;
+    uint8_t light_level;
     char buf[17];
+    update_record(&rec_maxtemp, systime, 0, 0);
+    update_record(&rec_mintemp, systime, 50, 0);
+    update_record(&rec_maxlight, systime, 0, 0);
+    update_record(&rec_minlight, systime, 0, 3);
 
     // initialize the device
     SYSTEM_Initialize();
@@ -128,77 +130,260 @@ void main(void) {
     //I2C_SDA = 1;
     //WPUC3 = 1;
     //WPUC4 = 1;
-    LCDinit();
-    temperature = readTC74();
-    
+    LCDinit();    
 
-    seconds = 0;
-    minutes = 0;
-    hours = 0;
-    sensors_read = 0;
-    SystemState state = normal;
-    
+    systime.hours = 0; systime.minutes = 0; systime.seconds = 0;
+    altime.hours = 0; altime.minutes= 0; altime.seconds = 0;
+    altemp = 0;
+    allight = 0;
+    trigger_sensors = 1;
+    time_paused = 0;
+    State state = {};
     
     uint8_t alarms_enabled = 0;
+    time_alarm_trigd = 0;
+    temp_alarm_trigd = 0;
+    light_alarm_trigd = 0;
+    update_lcd = 1;
 
     D5_SetHigh();
 
     while (1) {
 
         // Periodic reading of temperature sensor
-        if (sensors_read == 1) {
+        if (trigger_sensors == 1) {
             temperature = readTC74();
-            sensors_read = 0;
+            
+            ADCC_StartConversion(ANALOG_IN);
+            while(!ADCC_IsConversionDone());
+            light_level = (uint8_t)((3 * ADCC_GetSingleConversion(ANALOG_IN))/1023 );
+            
+            if (temperature >= rec_maxtemp.temp) 
+                update_record(&rec_maxtemp, systime, temperature, light_level);
+            if (temperature <= rec_mintemp.temp)
+                update_record(&rec_mintemp, systime, temperature, light_level);
+            if (light_level >= rec_maxlight.light )
+                update_record(&rec_maxlight, systime, temperature, light_level);
+            if (light_level <= rec_minlight.light)
+                update_record(&rec_minlight, systime, temperature, light_level);
+            
+            trigger_sensors = 0;
+            update_lcd = 1;
             // max min stuff goes here later?
         }
         
+        if(update_lcd) {
+            update_lcd = 0;
+                // Print the screen depending on the state of the system
+            switch (state.sys) {
+                case NORMAL:
 
-        // Handle the buttons depending on the state of the system
-        if (S1.event) {
-            S1.event = 0;
-            switch (state) {
-                case normal:
-                    state = config;
+                    LCDcmd(0x80);       //first line, first column
+                    while (LCDbusy());
+                    sprintf(buf,"%02d:%02d:%02d  %c%c%c %c%c",
+                            systime.hours, systime.minutes, systime.seconds,
+                            temp_alarm_trigd?'C':' ',
+                            time_alarm_trigd?'T':' ',
+                            light_alarm_trigd?'L':' ',
+                            alarms_enabled?'A':' ',
+                            ' ');
+                    LCDstr(buf);
+                    while (LCDbusy());
+                    LCDcmd(0xc0);       // second line, first column
+                    sprintf(buf, "%02d C         L %d",temperature, light_level);
+                    while (LCDbusy());
+                    LCDstr(buf);
+
                     break;
-                case config:
-                    state = normal;
+
+                case CONFIG:
+                    
+
+                    LCDcmd(0x80);       //first line, first column
+                    while (LCDbusy());
+                    sprintf(buf,"%02d:%02d:%02d  %c%c%c %c%c",
+                            (state.cfg!=TIME_ALARM)? systime.hours : altime.hours,
+                            (state.cfg!=TIME_ALARM)? systime.minutes: altime.minutes,
+                            (state.cfg!=TIME_ALARM)? systime.seconds: altime.seconds,
+                            'C',
+                            'T',
+                            'L',
+                            alarms_enabled?'A':'a',
+                            'R');
+                    LCDstr(buf);
+                    while (LCDbusy());
+                    LCDcmd(0xc0);       // second line, first column
+                    sprintf(buf, "%02d C         L %d",altemp, allight);
+                    while (LCDbusy());
+                    LCDstr(buf);
+                    while (LCDbusy());
+                    LCDcmd(pos[state.cfg][state.tim][state.act] | 0x80); // sets the cursor over editable field
                     break;
-                case records:
+
+                case RECORDS1:
+                    LCDcmd(0x80);       //first line, first column
+                    while (LCDbusy());
+                    print_record(buf, &rec_maxtemp);
+                    LCDstr(buf);
+                    while (LCDbusy());
+                    LCDcmd(0xc0);
+                    while (LCDbusy());
+                    print_record(buf, &rec_mintemp);
+                    LCDstr(buf);
+                    break;
+
+                case RECORDS2:
+                    LCDcmd(0x80);       //first line, first column
+                    while (LCDbusy());
+                    print_record(buf, &rec_maxlight);
+                    LCDstr(buf);
+                    LCDcmd(0xc0);
+                    while (LCDbusy());
+                    print_record(buf, &rec_minlight);
+                    LCDstr(buf);
                     break;
             }
-        }
 
-
-        // Print the screen depending on the state of the system
-        switch (state) {
-            case normal:
-                
-                LCDcmd(0x80);       //first line, first column
-                while (LCDbusy());
-                sprintf(buf,"%02d:%02d:%02d  %c%c%c %c%c",
-                        hours, minutes, seconds,
-                        temp_alarm_trigd?'C':' ',
-                        time_alarm_trigd?'T':' ',
-                        light_alarm_trigd?'L':' ',
-                        alarms_enabled?'A':' ',
-                        ' ');
-                LCDstr(buf);
-                while (LCDbusy());
-                LCDcmd(0xc0);       // second line, first column
-                sprintf(buf, "%02d C         L %d",temperature, light_level);
-                while (LCDbusy());
-                LCDstr(buf);
-                
-                break;
-                
-            case config:
-                LCDcmd(0x80);       //first line, first column
-                while (LCDbusy());
-                LCDstr("CONFIG MODE");
-                break;
-            case records:
-                break;
         }
+        
+        
+        if(S1.event | S2.event) {
+            // Handle the buttons depending on the state of the system
+            switch (state.sys) {
+                case NORMAL:
+                    // if there are alarms, S1 clears them
+                    if(time_alarm_trigd || temp_alarm_trigd || light_alarm_trigd){
+                       if ( handle_btn(&S1) ) {
+                           time_alarm_trigd = 0;
+                           temp_alarm_trigd = 0;
+                           light_alarm_trigd = 0;
+                       }
+                    }
+                    else {
+                        state.sys = handle_btn(&S1)? CONFIG: state.sys;
+                        // otherwise S1 advances to cfg state                    
+                    }
+                    // on sw2  enter records
+                    state.sys = handle_btn(&S2)? RECORDS1: state.sys;
+
+                    break;
+
+                case CONFIG:
+                    switch (state.cfg) {
+                        case TIME_SET:
+                            time_paused = 1;
+                            switch (state.tim) {
+                                case SET_HOURS:
+                                    //pos = ;// cursor position
+                                    state.tim = handle_btn(&S1)? SET_MINUTES: state.tim;
+                                    systime.hours = (systime.hours + handle_btn(&S2)) % 24;
+                                    break;
+                                case SET_MINUTES:
+                                    //pos = 0x04;
+                                    state.tim = handle_btn(&S1)? SET_SECONDS: state.tim;
+                                    systime.minutes = (systime.minutes + handle_btn(&S2)) % 60;
+                                    break;
+                                case SET_SECONDS:
+                                    //pos = 0x07;
+                                    if( handle_btn(&S1) ) {
+                                        state.tim = SET_HOURS;
+                                        state.cfg = TIME_ALARM;  
+                                        time_paused = 0;
+                                    }
+                                    systime.seconds = (systime.seconds + handle_btn(&S2)) % 60;
+                                    break;
+                            }
+                            break;
+                        case TIME_ALARM:
+                            if(state.act == INACTIVE) {
+                                //pos = 0x0a;
+                                state.cfg = handle_btn(&S1)? TEMP_ALARM: state.cfg;
+                                state.act = handle_btn(&S2)? ACTIVE: state.act;
+                            }
+                            else {
+                                switch (state.tim) {
+                                    case SET_HOURS:
+                                        //pos = 0x01;
+                                        state.tim = handle_btn(&S1)? SET_MINUTES: state.tim;
+                                        altime.hours = (altime.hours + handle_btn(&S2)) % 24;
+                                        break;
+                                    case SET_MINUTES:
+                                        //pos = 0x04;
+                                        state.tim = handle_btn(&S1)? SET_SECONDS: state.tim;
+                                        altime.minutes = (altime.minutes + handle_btn(&S2)) % 60;
+                                        break;
+                                    case SET_SECONDS:
+                                        //pos = 0x07;
+                                        if( handle_btn(&S1) ) {
+                                            state.tim = SET_HOURS;
+                                            state.act = INACTIVE;                                            
+                                        }
+                                        altime.seconds = (altime.seconds + handle_btn(&S2)) % 60;
+                                        break;
+                                }
+                            }
+                            break;
+                        case TEMP_ALARM:
+                            if(state.act == INACTIVE) {
+                                //pos = 0x0b;
+                                state.cfg = handle_btn(&S1)? LIGHT_ALARM: state.cfg;
+                                state.act = handle_btn(&S2)? ACTIVE: state.act;
+                            }
+                            else {
+                                //pos = 0x41;
+                                state.act = handle_btn(&S1)? INACTIVE: state.act;
+                                altemp = (altemp + handle_btn(&S2)) % 51;
+                            }
+                            break;
+                        case LIGHT_ALARM:
+                            if(state.act == INACTIVE) {
+                                //pos = 0x0c;
+                                state.cfg = handle_btn(&S1)? ALARMS: state.cfg;
+                                state.act = handle_btn(&S2)? ACTIVE: state.act;
+                            }
+                            else {
+                                //pos = 0x4f;
+                                state.act = handle_btn(&S1)? INACTIVE: state.act;
+                                allight = (allight + handle_btn(&S2)) % 4;
+                            }
+                            break;
+                        case ALARMS:
+                            //pos = 0x0e;
+                            state.cfg = handle_btn(&S1)? RESET: state.cfg;
+                            if(handle_btn(&S2))
+                                alarms_enabled = !alarms_enabled;
+                            break;
+                        case RESET:
+                            //pos = 0x0f;
+                            if( handle_btn(&S1) ) {
+                                state.cfg = TIME_SET;
+                                state.sys = NORMAL;
+                            }
+                            if(handle_btn(&S2)) {
+                                update_record(&rec_maxtemp, systime, 0, 0);
+                                update_record(&rec_mintemp, systime, 50, 0);
+                                update_record(&rec_maxlight, systime, 0, 0);
+                                update_record(&rec_minlight, systime, 0, 3);
+                            }
+
+                            break;
+                    };
+                    break;
+
+                case RECORDS1:
+                    handle_btn(&S1); // we do this just to clear S1 state
+                    state.sys = handle_btn(&S2)? RECORDS2: state.sys;
+                    break;
+
+                case RECORDS2:
+                    handle_btn(&S1); // we do this just to clear S1 state
+                    state.sys = handle_btn(&S2)? NORMAL: state.sys;
+                    break;
+            }
+            
+        }
+        
+        asm("SLEEP");
         
     }
 }
