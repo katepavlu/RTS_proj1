@@ -1,28 +1,132 @@
 #include "auxiliary.h"
 #include "mcc_generated_files/mcc.h"
 
-void set_eeprom_default(){
-    /* From the prof example we should be able to just uncomment this and it should work for the default values
-    DATAEE_WriteByte(ADDR_PMON, 5);
-    DATAEE_WriteByte(ADDR_TALA, 3);
-    DATAEE_WriteByte(ADDR_TINA, 10);
-    DATAEE_WriteByte(ADDR_ALAF, 0);
-    DATAEE_WriteByte(ADDR_ALAH, 12);
-    DATAEE_WriteByte(ADDR_ALAM, 0);
-    DATAEE_WriteByte(ADDR_ALAS, 0);
-    DATAEE_WriteByte(ADDR_ALAT, 20);
-    DATAEE_WriteByte(ADDR_ALAL, 2);
-    DATAEE_WriteByte(ADDR_CLKH, 0);
-    DATAEE_WriteByte(ADDR_CLKM, 0);
-     */
+void set_default_params(Params* params){
+    params->pmon = PMON;
+    params->tala = TALA;
+    params->tina = TINA;
+    params->alaf = ALAF;
+    
+    params->altime.hours =  ALAH;
+    params->altime.minutes =  ALAM;
+    params->altime.seconds =  ALAS;
+    
+    params->alat = ALAT;
+    params->alal = ALAL;
+    
+    params->systime.hours = CLKH;
+    params->systime.minutes = CLKM;
+    params->systime.seconds = 0;
+    
+    params->maxtemp.time.hours = 0;
+    params->maxtemp.time.minutes = 0;
+    params->maxtemp.time.seconds = 0;
+    params->maxtemp.temp = 0;
+    params->maxtemp.light = 0;
+    
+    params->mintemp.time.hours = 0;
+    params->mintemp.time.minutes = 0;
+    params->mintemp.time.seconds = 0;
+    params->mintemp.temp = 50; // this means that the minima will be update immediately
+    params->mintemp.light = 0;
+    
+    params->maxlight.time.hours = 0;
+    params->maxlight.time.minutes = 0;
+    params->maxlight.time.seconds = 0;
+    params->maxlight.temp = 0;
+    params->maxlight.light = 0;
+    
+    params->minlight.time.hours = 0;
+    params->minlight.time.minutes = 0;
+    params->minlight.time.seconds = 0;
+    params->minlight.temp = 0;
+    params->minlight.light = 3;    
 }
 
-void write_eeprom(uint16_t address, uint8_t value){
-    //DATAEE_WriteByte(ADDR_CLKM, value);
+void read_from_eeprom(Params* params){
+    uint8_t stored_sum, calc_sum;
+    uint8_t *p = (uint8_t*) params;
+    // read the parameter struct as a byte array
+    
+    // write the bytes
+    // we do not need to care about padding or endianness as long as the read and write
+    // are done in the same order
+    for(size_t i = 0; i < sizeof(*params); i++)
+        *(p + i) = DATAEE_ReadByte(EEPROM_START_ADDR + i);
+    
+    stored_sum = DATAEE_ReadByte(ADDR_CHECKSUM);
+    calc_sum = calculate_checksum(params);
+    
+    if (stored_sum != calc_sum){
+        set_default_params(params);
+        save_to_eeprom(params);
+    }
+
 }
 
-uint8_t read_eeprom(uint16_t address){
-    //return DATAEE_ReadByte(address)
+// compare two parameter structs, BUT skip the current seconds
+// returns 0 if they are the same
+uint8_t compare_params(Params* eeprom_params, Params* current_params) {
+    return 
+            eeprom_params->pmon != current_params->pmon |
+            eeprom_params->tala != current_params->tala |
+            eeprom_params->tina != current_params->tina |
+            eeprom_params->alaf != current_params->alaf |
+            
+            eeprom_params->altime.hours != current_params->altime.hours |
+            eeprom_params->altime.minutes != current_params->altime.minutes |
+            eeprom_params->altime.seconds != current_params->altime.seconds |
+            
+            eeprom_params->alat != current_params->alat |
+            eeprom_params->alal != current_params->alal |
+            
+            eeprom_params->systime.hours != current_params->systime.hours |
+            eeprom_params->systime.minutes != current_params->systime.minutes |
+          //eeprom_params->altime.seconds != current_params->altime.seconds |
+            
+            eeprom_params->maxtemp.time.hours != current_params->maxtemp.time.hours |
+            eeprom_params->maxtemp.time.minutes != current_params->maxtemp.time.minutes |
+            eeprom_params->maxtemp.time.seconds != current_params->maxtemp.time.seconds |
+            eeprom_params->maxtemp.temp != current_params->maxtemp.temp |
+            eeprom_params->maxtemp.light != current_params->maxtemp.light |
+            
+            eeprom_params->mintemp.time.hours != current_params->mintemp.time.hours |
+            eeprom_params->mintemp.time.minutes != current_params->mintemp.time.minutes |
+            eeprom_params->mintemp.time.seconds != current_params->mintemp.time.seconds |
+            eeprom_params->mintemp.temp != current_params->mintemp.temp |
+            eeprom_params->mintemp.light != current_params->mintemp.light |
+            
+            eeprom_params->maxlight.time.hours != current_params->maxlight.time.hours |
+            eeprom_params->maxlight.time.minutes != current_params->maxlight.time.minutes |
+            eeprom_params->maxlight.time.seconds != current_params->maxlight.time.seconds |
+            eeprom_params->maxlight.temp != current_params->maxlight.temp |
+            eeprom_params->maxlight.light != current_params->maxlight.light |
+            
+            eeprom_params->minlight.time.hours != current_params->minlight.time.hours |
+            eeprom_params->minlight.time.minutes != current_params->minlight.time.minutes |
+            eeprom_params->minlight.time.seconds != current_params->minlight.time.seconds |
+            eeprom_params->minlight.temp != current_params->minlight.temp |
+            eeprom_params->minlight.light != current_params->minlight.light
+            ;
+}
+
+// the checksum is just the sum of the bytes in the struct
+uint8_t calculate_checksum(Params* params){
+    uint8_t *p = (uint8_t*) params;
+    uint8_t sum = 0;
+    for(size_t i = 0; i < sizeof(*params); i++)
+        sum += *(p + i);
+    return sum;
+}
+
+void save_to_eeprom(Params* params){
+    uint8_t *p = (uint8_t*) params;
+
+    for(size_t i = 0; i < sizeof(*params); i++)
+        DATAEE_WriteByte(EEPROM_START_ADDR + i, *(p + i));
+
+    uint8_t new_sum=calculate_checksum(params);
+    DATAEE_WriteByte(ADDR_CHECKSUM, new_sum);
 }
 
 
@@ -116,7 +220,7 @@ void t1_isr() {
     xmilis++;
     if (xmilis >= 200) {
         if (!time_paused) {
-            systime.seconds++;
+            current_params.systime.seconds++;
             update_lcd = 1;
         }
         seconds_monitor++;
@@ -124,19 +228,19 @@ void t1_isr() {
         D5_Toggle();
     }
     
-    if (seconds_monitor > PMON) {
+    if (seconds_monitor > EEPROM_params.pmon) {
         seconds_monitor = 0;
         trigger_sensors = 1;
     }
     
-    if (systime.seconds >= 60) {
-        systime.seconds = 0;
-        systime.minutes++;
+    if (current_params.systime.seconds >= 60) {
+        current_params.systime.seconds = 0;
+        current_params.systime.minutes++;
         update_lcd = 1;
     }
-    if (systime.minutes >= 60) {
-        systime.minutes = 0;
-        systime.hours = (systime.hours + 1) % 24;
+    if (current_params.systime.minutes >= 60) {
+        current_params.systime.minutes = 0;
+        current_params.systime.hours = (current_params.systime.hours + 1) % 24;
         update_lcd = 1;
     }
 
