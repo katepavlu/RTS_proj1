@@ -51,7 +51,7 @@ void read_from_eeprom(Params* params){
     // write the bytes
     // we do not need to care about padding or endianness as long as the read and write
     // are done in the same order
-    for(size_t i = 0; i < sizeof(*params); i++)
+    for(size_t i = 0; i < sizeof(Params); i++)
         *(p + i) = DATAEE_ReadByte(EEPROM_START_ADDR + i);
     
     stored_sum = DATAEE_ReadByte(ADDR_CHECKSUM);
@@ -64,48 +64,56 @@ void read_from_eeprom(Params* params){
 
 }
 
+void copy_params(Params* source, Params* target) {
+    uint8_t *ps = (uint8_t*) source;
+    uint8_t *pt = (uint8_t*) target;
+    
+    for(size_t i = 0; i < sizeof(Params); i++)
+        *(pt + i) = *(ps + i);
+}
+
 // compare two parameter structs, BUT skip the current seconds
 // returns 0 if they are the same
 uint8_t compare_params(Params* eeprom_params, Params* current_params) {
     return 
-            eeprom_params->pmon != current_params->pmon |
-            eeprom_params->tala != current_params->tala |
-            eeprom_params->tina != current_params->tina |
-            eeprom_params->alaf != current_params->alaf |
+            eeprom_params->pmon != current_params->pmon ||
+            eeprom_params->tala != current_params->tala ||
+            eeprom_params->tina != current_params->tina ||
+            eeprom_params->alaf != current_params->alaf ||
             
-            eeprom_params->altime.hours != current_params->altime.hours |
-            eeprom_params->altime.minutes != current_params->altime.minutes |
-            eeprom_params->altime.seconds != current_params->altime.seconds |
+            eeprom_params->altime.hours != current_params->altime.hours ||
+            eeprom_params->altime.minutes != current_params->altime.minutes ||
+            eeprom_params->altime.seconds != current_params->altime.seconds ||
             
-            eeprom_params->alat != current_params->alat |
-            eeprom_params->alal != current_params->alal |
+            eeprom_params->alat != current_params->alat ||
+            eeprom_params->alal != current_params->alal ||
             
-            eeprom_params->systime.hours != current_params->systime.hours |
-            eeprom_params->systime.minutes != current_params->systime.minutes |
-          //eeprom_params->altime.seconds != current_params->altime.seconds |
+            eeprom_params->systime.hours != current_params->systime.hours ||
+            eeprom_params->systime.minutes != current_params->systime.minutes ||
+          //eeprom_params->altime.seconds != current_params->altime.seconds ||
             
-            eeprom_params->maxtemp.time.hours != current_params->maxtemp.time.hours |
-            eeprom_params->maxtemp.time.minutes != current_params->maxtemp.time.minutes |
-            eeprom_params->maxtemp.time.seconds != current_params->maxtemp.time.seconds |
-            eeprom_params->maxtemp.temp != current_params->maxtemp.temp |
-            eeprom_params->maxtemp.light != current_params->maxtemp.light |
+            eeprom_params->maxtemp.time.hours != current_params->maxtemp.time.hours ||
+            eeprom_params->maxtemp.time.minutes != current_params->maxtemp.time.minutes ||
+            eeprom_params->maxtemp.time.seconds != current_params->maxtemp.time.seconds ||
+            eeprom_params->maxtemp.temp != current_params->maxtemp.temp ||
+            eeprom_params->maxtemp.light != current_params->maxtemp.light ||
             
-            eeprom_params->mintemp.time.hours != current_params->mintemp.time.hours |
-            eeprom_params->mintemp.time.minutes != current_params->mintemp.time.minutes |
-            eeprom_params->mintemp.time.seconds != current_params->mintemp.time.seconds |
-            eeprom_params->mintemp.temp != current_params->mintemp.temp |
-            eeprom_params->mintemp.light != current_params->mintemp.light |
+            eeprom_params->mintemp.time.hours != current_params->mintemp.time.hours ||
+            eeprom_params->mintemp.time.minutes != current_params->mintemp.time.minutes ||
+            eeprom_params->mintemp.time.seconds != current_params->mintemp.time.seconds ||
+            eeprom_params->mintemp.temp != current_params->mintemp.temp ||
+            eeprom_params->mintemp.light != current_params->mintemp.light ||
             
-            eeprom_params->maxlight.time.hours != current_params->maxlight.time.hours |
-            eeprom_params->maxlight.time.minutes != current_params->maxlight.time.minutes |
-            eeprom_params->maxlight.time.seconds != current_params->maxlight.time.seconds |
-            eeprom_params->maxlight.temp != current_params->maxlight.temp |
-            eeprom_params->maxlight.light != current_params->maxlight.light |
+            eeprom_params->maxlight.time.hours != current_params->maxlight.time.hours ||
+            eeprom_params->maxlight.time.minutes != current_params->maxlight.time.minutes ||
+            eeprom_params->maxlight.time.seconds != current_params->maxlight.time.seconds ||
+            eeprom_params->maxlight.temp != current_params->maxlight.temp ||
+            eeprom_params->maxlight.light != current_params->maxlight.light ||
             
-            eeprom_params->minlight.time.hours != current_params->minlight.time.hours |
-            eeprom_params->minlight.time.minutes != current_params->minlight.time.minutes |
-            eeprom_params->minlight.time.seconds != current_params->minlight.time.seconds |
-            eeprom_params->minlight.temp != current_params->minlight.temp |
+            eeprom_params->minlight.time.hours != current_params->minlight.time.hours ||
+            eeprom_params->minlight.time.minutes != current_params->minlight.time.minutes ||
+            eeprom_params->minlight.time.seconds != current_params->minlight.time.seconds ||
+            eeprom_params->minlight.temp != current_params->minlight.temp ||
             eeprom_params->minlight.light != current_params->minlight.light
             ;
 }
@@ -114,7 +122,7 @@ uint8_t compare_params(Params* eeprom_params, Params* current_params) {
 uint8_t calculate_checksum(Params* params){
     uint8_t *p = (uint8_t*) params;
     uint8_t sum = 0;
-    for(size_t i = 0; i < sizeof(*params); i++)
+    for(size_t i = 0; i < sizeof(Params); i++)
         sum += *(p + i);
     return sum;
 }
@@ -122,7 +130,7 @@ uint8_t calculate_checksum(Params* params){
 void save_to_eeprom(Params* params){
     uint8_t *p = (uint8_t*) params;
 
-    for(size_t i = 0; i < sizeof(*params); i++)
+    for(size_t i = 0; i < sizeof(Params); i++)
         DATAEE_WriteByte(EEPROM_START_ADDR + i, *(p + i));
 
     uint8_t new_sum=calculate_checksum(params);
@@ -173,7 +181,7 @@ unsigned char readTC74(void) {
 }
 
 void btn_update(volatile Btn *btn, uint8_t pin) {
-    btn->hist = (btn->hist<<1) | pin;
+    btn->hist = ( btn->hist << 1 ) | pin;
     // https://hackaday.com/2015/12/10/embed-with-elliot-debounce-your-noisy-buttons-part-ii/
     if (
             (btn->hist & 0b11000111)

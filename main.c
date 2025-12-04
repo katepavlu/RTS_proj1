@@ -138,13 +138,13 @@ void main(void) {
             while(!ADCC_IsConversionDone());
             light_level = (uint8_t)((3 * ADCC_GetSingleConversion(ANALOG_IN))/1023 );
             
-            if (temperature >= current_params.maxtemp.temp) 
+            if (temperature > current_params.maxtemp.temp) 
                 update_record((Record*)&current_params.maxtemp, current_params.systime, temperature, light_level);
-            if (temperature <= current_params.mintemp.temp)
+            if (temperature < current_params.mintemp.temp)
                 update_record((Record*)&current_params.mintemp, current_params.systime, temperature, light_level);
-            if (light_level >= current_params.maxlight.light )
+            if (light_level > current_params.maxlight.light )
                 update_record((Record*)&current_params.maxlight, current_params.systime, temperature, light_level);
-            if (light_level <= current_params.minlight.light)
+            if (light_level < current_params.minlight.light)
                 update_record((Record*)&current_params.minlight, current_params.systime, temperature, light_level);
             
             trigger_sensors = 0;
@@ -346,6 +346,13 @@ void main(void) {
                     state.sys = handle_btn(&S2)? NORMAL: state.sys;
                     break;
             }
+            
+        }
+        
+        if( compare_params((Params*)&EEPROM_params, (Params*)&current_params) ) {
+            copy_params((Params*)&current_params, (Params*)&EEPROM_params);
+            EEPROM_params.systime.seconds = 0;
+            save_to_eeprom((Params*)&EEPROM_params);
             
         }
         

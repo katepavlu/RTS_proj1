@@ -70,6 +70,7 @@ void read_from_eeprom(Params* params);
 uint8_t calculate_checksum(Params* params);
 void save_to_eeprom(Params* params);
 uint8_t compare_params(Params* eeprom_params, Params* current_params);
+void copy_params(Params* source, Params* target);
 
 unsigned char readTC74 (void);
 
