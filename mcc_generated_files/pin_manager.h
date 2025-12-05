@@ -125,6 +125,18 @@
 #define D3_SetAnalogMode()      do { ANSELAbits.ANSA5 = 1; } while(0)
 #define D3_SetDigitalMode()     do { ANSELAbits.ANSA5 = 0; } while(0)
 
+// get/set RA6 procedures
+#define RA6_SetHigh()            do { LATAbits.LATA6 = 1; } while(0)
+#define RA6_SetLow()             do { LATAbits.LATA6 = 0; } while(0)
+#define RA6_Toggle()             do { LATAbits.LATA6 = ~LATAbits.LATA6; } while(0)
+#define RA6_GetValue()              PORTAbits.RA6
+#define RA6_SetDigitalInput()    do { TRISAbits.TRISA6 = 1; } while(0)
+#define RA6_SetDigitalOutput()   do { TRISAbits.TRISA6 = 0; } while(0)
+#define RA6_SetPullup()             do { WPUAbits.WPUA6 = 1; } while(0)
+#define RA6_ResetPullup()           do { WPUAbits.WPUA6 = 0; } while(0)
+#define RA6_SetAnalogMode()         do { ANSELAbits.ANSA6 = 1; } while(0)
+#define RA6_SetDigitalMode()        do { ANSELAbits.ANSA6 = 0; } while(0)
+
 // get/set D5 aliases
 #define D5_TRIS                 TRISAbits.TRISA7
 #define D5_LAT                  LATAbits.LATA7

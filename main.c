@@ -91,7 +91,9 @@ void main(void) {
     uint8_t temperature;
     uint8_t light_level;
     char display_buf[17];
-    uint8_t timestamp;
+    uint8_t records_timeout_timestamp;
+    uint8_t alarm_out_timestamp;
+    uint8_t alarm_out = 0;
     
 
     // initialize the device
@@ -113,6 +115,9 @@ void main(void) {
     //INTERRUPT_PeripheralInterruptDisable();
     TMR1_SetInterruptHandler(t1_isr);
     // TMR2_SetInterruptHandler(t2_isr); maybe later on we have a 2nd timer for dealing with buttons?
+    
+    PWM6_LoadDutyValue(0);
+    TMR2_Stop();
 
     OpenI2C();
     LCDinit();    
@@ -173,6 +178,21 @@ void main(void) {
             
             trigger_sensors = 0;
             update_lcd = 1;
+        }
+        
+        if( (temp_alarm_trigd || light_alarm_trigd || time_alarm_trigd)
+                && (alarm_out == 0)) {
+            alarm_out = 1;
+            alarm_out_timestamp = current_params.systime.seconds;  
+            TMR2_Start();
+            PWM6_LoadDutyValue(100);
+        }
+        
+        if ((alarm_out == 1) &&
+                ((alarm_out_timestamp + current_params.tala) %60 == current_params.systime.seconds) ) {
+            alarm_out = 0;
+            PWM6_LoadDutyValue(0);
+            TMR2_Stop();
         }
         
         if(update_lcd) {
@@ -269,7 +289,7 @@ void main(void) {
                     // on sw2  enter records
                     if(handle_btn(&S2)){
                         state.sys = RECORDS1;
-                        timestamp = current_params.systime.seconds;
+                        records_timeout_timestamp = current_params.systime.seconds;
                     }
 
                     break;
@@ -367,7 +387,7 @@ void main(void) {
                     handle_btn(&S1); // we do this just to clear S1 state
                     if(handle_btn(&S2)){
                         state.sys = RECORDS2;
-                        timestamp = current_params.systime.seconds;
+                        records_timeout_timestamp = current_params.systime.seconds;
                     }
                     break;
 
@@ -380,7 +400,8 @@ void main(void) {
         }
         
         // if we are on one record or 8s, return to normal state
-        if ( ((timestamp + current_params.tina)%60 ) == current_params.systime.seconds )
+        if ( (state.sys == RECORDS1 || state.sys == RECORDS2) &&
+                ((records_timeout_timestamp + current_params.tina)%60 ) == current_params.systime.seconds )
             state.sys = NORMAL;
         
         if( compare_params((Params*)&EEPROM_params, (Params*)&current_params) ) {
@@ -389,7 +410,8 @@ void main(void) {
             save_to_eeprom((Params*)&EEPROM_params);
         }
         
-        asm("SLEEP"); // enter low power mode until next timer firing
+        if(alarm_out == 0)
+            asm("SLEEP"); // enter low power mode until next timer firing
         
     }
 }
