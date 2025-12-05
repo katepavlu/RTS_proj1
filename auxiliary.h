@@ -98,4 +98,8 @@ extern volatile uint8_t trigger_sensors;
 extern volatile Params current_params;
 extern volatile Btn S1, S2;
 
+extern volatile uint8_t light_alarm_trigd;
+extern volatile uint8_t time_alarm_trigd;
+extern volatile uint8_t temp_alarm_trigd;
+
 #endif

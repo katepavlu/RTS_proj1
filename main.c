@@ -61,6 +61,10 @@ volatile uint8_t time_paused;
 volatile uint8_t trigger_sensors;
 volatile uint8_t update_lcd = 1;
 
+volatile uint8_t light_alarm_trigd;
+volatile uint8_t time_alarm_trigd;
+volatile uint8_t temp_alarm_trigd;
+
 // cursor positions
 uint8_t pos[RESET + 1][SET_SECONDS + 1][ACTIVE + 1] ={
     [TIME_SET][SET_HOURS][INACTIVE]    = 0x01,
@@ -87,10 +91,9 @@ void main(void) {
     uint8_t temperature;
     uint8_t light_level;
     char display_buf[17];
+    uint8_t timestamp;
     
-    uint8_t light_alarm_trigd;
-    uint8_t time_alarm_trigd;
-    uint8_t temp_alarm_trigd;
+
     // initialize the device
     SYSTEM_Initialize();
 
@@ -126,6 +129,8 @@ void main(void) {
     update_lcd = 1;
 
     D5_SetHigh();
+    D2_SetLow();
+    D3_SetLow();
 
     while (1) {
 
@@ -145,6 +150,26 @@ void main(void) {
                 update_record((Record*)&current_params.maxlight, current_params.systime, temperature, light_level);
             if (light_level < current_params.minlight.light)
                 update_record((Record*)&current_params.minlight, current_params.systime, temperature, light_level);
+            
+            if (light_level < current_params.alal) {
+                D2_SetHigh();
+                if (current_params.alaf) {
+                    light_alarm_trigd = 1;
+                }
+            }
+            else {
+                D2_SetLow();
+            }
+            
+            if (temperature > current_params.alat) {
+                D3_SetHigh();
+                if (current_params.alaf) {
+                    temp_alarm_trigd = 1;
+                }
+            }
+            else {
+                D3_SetLow();
+            }
             
             trigger_sensors = 0;
             update_lcd = 1;
@@ -242,7 +267,10 @@ void main(void) {
                         // otherwise S1 advances to cfg state                    
                     }
                     // on sw2  enter records
-                    state.sys = handle_btn(&S2)? RECORDS1: state.sys;
+                    if(handle_btn(&S2)){
+                        state.sys = RECORDS1;
+                        timestamp = current_params.systime.seconds;
+                    }
 
                     break;
 
@@ -337,7 +365,10 @@ void main(void) {
 
                 case RECORDS1:
                     handle_btn(&S1); // we do this just to clear S1 state
-                    state.sys = handle_btn(&S2)? RECORDS2: state.sys;
+                    if(handle_btn(&S2)){
+                        state.sys = RECORDS2;
+                        timestamp = current_params.systime.seconds;
+                    }
                     break;
 
                 case RECORDS2:
@@ -348,11 +379,14 @@ void main(void) {
             
         }
         
+        // if we are on one record or 8s, return to normal state
+        if ( ((timestamp + current_params.tina)%60 ) == current_params.systime.seconds )
+            state.sys = NORMAL;
+        
         if( compare_params((Params*)&EEPROM_params, (Params*)&current_params) ) {
             copy_params((Params*)&current_params, (Params*)&EEPROM_params);
             EEPROM_params.systime.seconds = 0;
             save_to_eeprom((Params*)&EEPROM_params);
-            
         }
         
         asm("SLEEP"); // enter low power mode until next timer firing

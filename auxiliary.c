@@ -251,7 +251,12 @@ void t1_isr() {
         current_params.systime.hours = (current_params.systime.hours + 1) % 24;
         update_lcd = 1;
     }
-
+    
+    if (current_params.alaf &&
+            current_params.systime.hours == current_params.altime.hours &&
+            current_params.systime.minutes == current_params.altime.minutes &&
+            current_params.systime.seconds == current_params.altime.seconds) 
+        time_alarm_trigd = 1;
     
     btn_update(&S1, SW1_GetValue());
     btn_update(&S2, SW2_GetValue());
