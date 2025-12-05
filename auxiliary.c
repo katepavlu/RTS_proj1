@@ -1,6 +1,10 @@
 #include "auxiliary.h"
 #include "mcc_generated_files/mcc.h"
 
+uint8_t ah = read_eeprom(ADDR_ALAH);
+uint8_t am = read_eeprom(ADDR_ALAM);
+uint8_t as = read_eeprom(ADDR_ALAS);
+
 void set_eeprom_default(){
     /* From the prof example we should be able to just uncomment this and it should work for the default values
     DATAEE_WriteByte(ADDR_PMON, 5);
@@ -162,6 +166,12 @@ void t1_isr() {
         systime.minutes = 0;
         systime.hours = (systime.hours + 1) % 24;
         update_lcd = 1;
+    }
+
+    if(systime.hours == ah && systime.minutes == am && systime.seconds == as){
+        PWM_Output_D4_Enable();
+        TMR2_StartTimer();
+        PWM6_LoadDutyValue(1);
     }
 
     
