@@ -61,9 +61,9 @@ volatile uint8_t time_paused;
 volatile uint8_t trigger_sensors;
 volatile uint8_t update_lcd = 1;
 
-volatile uint8_t light_alarm_trigd;
-volatile uint8_t time_alarm_trigd;
-volatile uint8_t temp_alarm_trigd;
+volatile Alarm light_alarm = {};
+volatile Alarm time_alarm = {};
+volatile Alarm temp_alarm = {};
 
 // cursor positions
 uint8_t pos[RESET + 1][SET_SECONDS + 1][ACTIVE + 1] ={
@@ -128,9 +128,6 @@ void main(void) {
     read_from_eeprom((Params*)&EEPROM_params);
     read_from_eeprom((Params*)&current_params);
     
-    time_alarm_trigd = 0;
-    temp_alarm_trigd = 0;
-    light_alarm_trigd = 0;
     update_lcd = 1;
 
     D5_SetHigh();
@@ -159,7 +156,8 @@ void main(void) {
             if (light_level < current_params.alal) {
                 D2_SetHigh();
                 if (current_params.alaf) {
-                    light_alarm_trigd = 1;
+                    light_alarm.triggered = 1;
+                    light_alarm.unhandled = 1;
                 }
             }
             else {
@@ -169,7 +167,8 @@ void main(void) {
             if (temperature > current_params.alat) {
                 D3_SetHigh();
                 if (current_params.alaf) {
-                    temp_alarm_trigd = 1;
+                    temp_alarm.triggered = 1;
+                    temp_alarm.unhandled = 1;
                 }
             }
             else {
@@ -180,7 +179,9 @@ void main(void) {
             update_lcd = 1;
         }
         
-        if( (temp_alarm_trigd || light_alarm_trigd || time_alarm_trigd)
+        if( (alarm_handler((Alarm*)&temp_alarm) ||
+                alarm_handler((Alarm*)&light_alarm) ||
+                alarm_handler((Alarm*)&time_alarm))
                 && (alarm_out == 0)) {
             alarm_out = 1;
             alarm_out_timestamp = current_params.systime.seconds;  
@@ -192,6 +193,7 @@ void main(void) {
                 ((alarm_out_timestamp + current_params.tala) %60 == current_params.systime.seconds) ) {
             alarm_out = 0;
             PWM6_LoadDutyValue(0);
+            while(RA6_GetValue()); // wait till the pin is off
             TMR2_Stop();
         }
         
@@ -205,9 +207,9 @@ void main(void) {
                     while (LCDbusy());
                     sprintf(display_buf,"%02d:%02d:%02d  %c%c%c %c%c",
                             current_params.systime.hours, current_params.systime.minutes, current_params.systime.seconds,
-                            temp_alarm_trigd?'C':' ',
-                            time_alarm_trigd?'T':' ',
-                            light_alarm_trigd?'L':' ',
+                            temp_alarm.triggered?'C':' ',
+                            time_alarm.triggered?'T':' ',
+                            light_alarm.triggered?'L':' ',
                             current_params.alaf?'A':' ',
                             ' ');
                     LCDstr(display_buf);
@@ -275,11 +277,11 @@ void main(void) {
             switch (state.sys) {
                 case NORMAL:
                     // if there are alarms, S1 clears them
-                    if(time_alarm_trigd || temp_alarm_trigd || light_alarm_trigd){
+                    if(time_alarm.triggered || temp_alarm.triggered || light_alarm.triggered){
                        if ( handle_btn(&S1) ) {
-                           time_alarm_trigd = 0;
-                           temp_alarm_trigd = 0;
-                           light_alarm_trigd = 0;
+                           time_alarm.triggered = 0;
+                           temp_alarm.triggered = 0;
+                           light_alarm.triggered = 0;
                        }
                     }
                     else {

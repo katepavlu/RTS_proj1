@@ -46,6 +46,11 @@ typedef struct {
     Record minlight;
 } Params;
 
+typedef struct {
+    uint8_t unhandled;
+    uint8_t triggered;
+} Alarm;
+
 // EEPROM Memory addresses
 #define EEPROM_START_ADDR 0x7000
 
@@ -98,8 +103,10 @@ extern volatile uint8_t trigger_sensors;
 extern volatile Params current_params;
 extern volatile Btn S1, S2;
 
-extern volatile uint8_t light_alarm_trigd;
-extern volatile uint8_t time_alarm_trigd;
-extern volatile uint8_t temp_alarm_trigd;
+extern volatile Alarm light_alarm;
+extern volatile Alarm time_alarm;
+extern volatile Alarm temp_alarm;
+
+uint8_t alarm_handler(Alarm* alarm);
 
 #endif
